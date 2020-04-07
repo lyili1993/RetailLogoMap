@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8">
+  <title>CodePen - display logos</title>
+  
+
+</head>
+<body>
+<!-- partial:index.partial.html -->
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>ArcGIS JavaScript Tutorials: Create a Starter App</title>
+  <style>
+    html, body, #viewDiv {
+      padding: 0;
+      margin: 0;
+      height: 100%;
+      width: 100%;
+    }
+  </style>
+    
+  <link rel="stylesheet" href="https://js.arcgis.com/4.13/esri/css/main.css">
+  <script src="https://js.arcgis.com/4.13/"></script>
+  
+  <script>  
+    require([
+
+      "esri/Map",
+      "esri/views/MapView",
+      "esri/layers/FeatureLayer",
+      "esri/renderers/UniqueValueRenderer",
+      "esri/renderers/smartMapping/statistics/uniqueValues",
+      "esri/tasks/support/Query",
+      "esri/tasks/QueryTask"
+    ], function(Map, MapView, FeatureLayer,UniqueValueRenderer,uniqueValues,Query,QueryTask) {
+
+
+      var map = new Map({
+        basemap: "topo-vector"
+      });
+
+      const view = new MapView({
+        container: "viewDiv",
+        map: map,
+        center: [-74.000682,40.724061],
+        zoom: 18
+      });
+
+      var storeLabels = {
+        symbol: {
+          type: "text",
+          color: "#FFFFFF",
+          haloColor: "#5E8D74",
+          haloSize: "2px",
+          font: {
+            size: "12px",
+            family: "Noto Sans",
+            style: "italic",
+            weight: "normal"
+          }
+        },
+        labelPlacement: "above-center",
+        labelExpressionInfo: {
+          expression: "$feature.name"
+        }
+      };
+
+      var stores = new FeatureLayer({
+        url:"https://services1.arcgis.com/3yPqaPHdDzXwd0QH/arcgis/rest/services/soho_clothing_stores/FeatureServer/0"
+        //labelingInfo: [storeLabels]
+      });
+      
+      map.add(stores);
+      view.whenLayerView(stores).then(function(layerView) {
+          layerView.watch("updating", function(value) {
+            if (!value) { 
+              // wait for the layer view to finish updating
+              // query all the features available for drawing.
+              var query = new Query();  
+              query.where = "website is not null";  // query for non-null values  
+              query.orderByFields = ["website"];    // sort it so we won't have to later  
+              query.returnGeometry = false;          // turn geometry off, required to be false when using returnDistinctValues  
+              query.returnDistinctValues = true;  
+              query.outFields = ["website"];
+
+              layerView
+                .queryFeatures(query)
+                .then(function(results) {
+                var atts = results.features.map( value => value.attributes);
+                var webs = atts.map( value => value.website);
+                console.log(webs)
+                var values=[];
+                webs.forEach(function(web){          
+                  values.push({value: web,
+                      symbol: {
+                        type: "picture-marker", 
+                        url: "http://favicon.yandex.net/favicon/"+web,
+                        //url: "https://logo.clearbit.com/"+web+"?size=25&format=png",
+                        width: "16px",
+                        height: "16px"
+                      }
+                      });
+                });
+                var storeRenderer = {
+                  
+                  type: "unique-value",
+                  field: "website",
+                  defaultSymbol: {
+                    type: "simple-marker",
+                    style:"square",
+                    color: "black",
+                    size: "8px"},
+                  uniqueValueInfos: values
+                };
+                stores.renderer=storeRenderer;
+          
+                })
+                .catch(function(error) {
+                  console.error("query failed: ", error);
+                });
+            }
+          });
+            });
+      
+        
+
+        });
+    
+            
+    
+    
+  </script>
+</head>
+<body>
+  <div id="viewDiv"></div>
+</body>
+</html>
+<!-- partial -->
+  
+</body>
+</html>
